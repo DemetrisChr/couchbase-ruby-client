@@ -37,10 +37,14 @@ module Couchbase
 
         def self.to_query_result(resps)
           Couchbase::Cluster::QueryResult.new do |res|
-            rows = []
-            resps.each do |resp|
-              rows.push(*resp.rows)
-              res.meta_data = convert_query_metadata(resp.meta_data) unless resp.meta_data.nil?
+            rows = Enumerator.new do |y|
+              loop do
+                resp = resps.next
+                res.meta_data = convert_query_metadata(resp.meta_data) unless resp.meta_data.nil?
+                resp.rows.each do |row|
+                  y << row
+                end
+              end
             end
             res.instance_variable_set(:@rows, rows)
           end
