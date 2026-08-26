@@ -1919,20 +1919,25 @@ module Couchbase
       attr_accessor :report_id # @return [String]
       attr_accessor :service_types # @return [Array<Symbol>]
       attr_accessor :timeout # @return [Integer, #in_milliseconds]
+      attr_accessor :parent_span # @return [Span, nil]
 
       # Creates an instance of options for {Couchbase::Bucket#ping}
       #
       # @param [String] report_id Holds custom report id.
-      # @@param [Array<Symbol>] service_types The service types to limit this diagnostics request
+      # @param [Array<Symbol>] service_types The service types to limit this ping request
       # @param [Integer, #in_milliseconds] timeout
+      # @param [Span, nil] parent_span if set holds the parent span, that should be used for this request
       #
       # @yieldparam [Ping] self
       def initialize(report_id: nil,
                      service_types: [:kv, :query, :analytics, :search, :views, :management],
-                     timeout: nil)
+                     timeout: nil,
+                     parent_span: nil)
         @report_id = report_id
         @service_types = service_types
         @timeout = timeout
+        @parent_span = parent_span
+
         yield self if block_given?
       end
 

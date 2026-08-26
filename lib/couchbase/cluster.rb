@@ -326,20 +326,22 @@ module Couchbase
     #
     # @return [PingResult]
     def ping(options = Options::Ping::DEFAULT)
-      resp = @backend.ping(nil, options.to_backend)
-      PingResult.new do |res|
-        res.version = resp[:version]
-        res.id = resp[:id]
-        res.sdk = resp[:sdk]
-        resp[:services].each do |type, svcs|
-          res.services[type] = svcs.map do |svc|
-            PingResult::ServiceInfo.new do |info|
-              info.id = svc[:id]
-              info.state = svc[:state]
-              info.latency = svc[:latency]
-              info.remote = svc[:remote]
-              info.local = svc[:local]
-              info.error = svc[:error]
+      @observability.record_operation(Observability::OP_PING, options.parent_span, self) do |_obs_handler|
+        resp = @backend.ping(nil, options.to_backend)
+        PingResult.new do |res|
+          res.version = resp[:version]
+          res.id = resp[:id]
+          res.sdk = resp[:sdk]
+          resp[:services].each do |type, svcs|
+            res.services[type] = svcs.map do |svc|
+              PingResult::ServiceInfo.new do |info|
+                info.id = svc[:id]
+                info.state = svc[:state]
+                info.latency = svc[:latency]
+                info.remote = svc[:remote]
+                info.local = svc[:local]
+                info.error = svc[:error]
+              end
             end
           end
         end

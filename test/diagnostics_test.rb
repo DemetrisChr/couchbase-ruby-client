@@ -22,6 +22,8 @@ module Couchbase
       skip("#{name}: The #{Couchbase::Protostellar::NAME} protocol does not support ping/diagnostics") if env.protostellar?
 
       connect
+
+      @bucket = @cluster.bucket(env.bucket)
     end
 
     def teardown
@@ -45,6 +47,13 @@ module Couchbase
         assert_equal 1, res.services.size
         assert_equal service_type, res.services.keys[0]
       end
+    end
+
+    def test_bucket_ping
+      res = @bucket.ping
+
+      assert_equal 1, res.services.size
+      assert_equal :kv, res.services.keys[0]
     end
   end
 end
