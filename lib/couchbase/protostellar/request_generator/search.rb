@@ -16,6 +16,7 @@
 
 require "google/protobuf/well_known_types"
 
+require "couchbase/errors"
 require "couchbase/search_options"
 
 require "couchbase/protostellar/generated/search/v1/search_pb"
@@ -48,7 +49,7 @@ module Couchbase
             scan_consistency: SCAN_CONSISTENCY_MAP[options.scan_consistency],
             include_explanation: options.explain,
             highlight_style: HIGHLIGHT_STYLE_MAP[options.highlight_style],
-            disable_scoring: options.disable_scoring,
+            disable_scoring: get_disable_scoring(options),
             include_locations: options.include_locations,
           }
 
@@ -342,6 +343,21 @@ module Couchbase
               raise Couchbase::Error::CouchbaseError, "Unrecognised search sort type"
             end
           end
+        end
+
+        # The only scoring mode supported by the protocol is {Couchbase::SearchScoring.none}.
+        # This will be updated to support all types of scoring once the protostellar protocol supports them.
+        def get_disable_scoring(options)
+          return options.disable_scoring if options.scoring.nil?
+
+          options.validate_scoring
+
+          unless options.scoring.is_a?(Couchbase::SearchScoring::SearchScoringNone)
+            raise Couchbase::Error::FeatureNotAvailable,
+                  "The #{Protostellar::NAME} protocol does not support #{options.scoring.class} scoring"
+          end
+
+          true
         end
 
         def get_facets(options)

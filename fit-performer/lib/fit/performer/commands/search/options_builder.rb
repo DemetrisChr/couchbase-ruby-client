@@ -178,6 +178,39 @@ module FIT
 
             self
           end
+
+          def set_disable_scoring
+            return self unless @raw_options.has_disable_scoring?
+
+            @options.disable_scoring = @raw_options.disable_scoring
+
+            self
+          end
+
+          def set_scoring
+            return self unless @raw_options.has_scoring?
+
+            proto_scoring = @raw_options.scoring
+
+            case proto_scoring.mode
+            when :reciprocal_rank_fusion
+              @options.scoring = Couchbase::SearchScoring.reciprocal_rank_fusion do |s|
+                proto_rrf = proto_scoring.reciprocal_rank_fusion
+                s.rank_constant = proto_rrf.rank_constant if proto_rrf.has_rank_constant?
+                s.window_size = proto_rrf.window_size if proto_rrf.has_window_size?
+              end
+            when :relative_score_fusion
+              @options.scoring = Couchbase::SearchScoring.relative_score_fusion do |s|
+                proto_rsf = proto_scoring.relative_score_fusion
+                s.window_size = proto_rsf.window_size if proto_rsf.has_window_size?
+              end
+            when :none
+              @options.scoring = Couchbase::SearchScoring.none
+            else
+              raise PerformerError, "Unknown search scoring mode `#{proto_scoring.mode}`"
+            end
+            self
+          end
         end
       end
     end

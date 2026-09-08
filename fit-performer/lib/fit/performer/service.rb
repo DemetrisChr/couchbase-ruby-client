@@ -77,6 +77,7 @@ module FIT
         :SDK_OBSERVABILITY_RFC_REV_24,
         :SDK_STABLE_OTEL_SEMANTIC_CONVENTIONS,
         :SDK_STABLE_OTEL_SEMANTIC_CONVENTIONS_EMITTED_BY_DEFAULT,
+        :SDK_SEARCH_SCORE_FUSION,
       ].freeze
 
       # We don't currently support transactions. However, the driver calls transactions_factory_create during the

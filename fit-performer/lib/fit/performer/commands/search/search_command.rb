@@ -56,6 +56,8 @@ module FIT
                    .set_raw
                    .set_include_locations
                    .set_serializer
+                   .set_disable_scoring
+                   .set_scoring
                    .set_parent_span(@get_span_fn)
             @cmd_args.append(builder.options)
           end

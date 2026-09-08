@@ -2329,7 +2329,12 @@ module Couchbase
       attr_accessor :highlight_style # @return [Symbol]
       attr_accessor :highlight_fields # @return [Array<String>]
       attr_accessor :fields # @return [Array<String>]
-      attr_accessor :disable_scoring # @return [Boolean]
+
+      # @deprecated Use +scoring+ with {SearchScoring.none} instead
+      # @return [Boolean]
+      attr_accessor :disable_scoring
+
+      attr_accessor :scoring # @return [SearchScoring, nil]
       attr_accessor :include_locations # @return [Boolean]
       attr_accessor :collections # @return [Array<String>, nil]
       attr_accessor :sort # @return [Array<String, Cluster::SearchSort>]
@@ -2346,7 +2351,12 @@ module Couchbase
       # @param [Array<String>] fields list of field values which should be retrieved for result documents, provided they
       #   were stored while indexing
       # @param [MutationState] mutation_state the mutation tokens this query should be consistent with
-      # @param [Boolean] disable_scoring If set to true, the server will not perform any scoring on the hits
+      # @param [Boolean] disable_scoring DEPRECATED: Use +scoring+ with {SearchScoring.none} instead. If set to true,
+      #   the server will not perform any scoring on the hits.
+      # @param [SearchScoring, nil] scoring specifies the scoring mode used for the request. For a
+      #   hybrid search (a traditional FTS query combined with one or more vector queries) a fusion strategy
+      #   controls how the FTS and vector result sets are merged into a single ranked list. Must not be used
+      #   together with +disable_scoring+.
       # @param [Boolean] include_locations UNCOMMITTED: If set to true, will include the vector of search_location in rows
       # @param [Array<String>, nil] collections list of collections by which to filter the results
       # @param [Array<String, Cluster::SearchSort>] sort Ordering rules to apply to the results. The list might contain
@@ -2372,6 +2382,7 @@ module Couchbase
                      fields: nil,
                      mutation_state: nil,
                      disable_scoring: false,
+                     scoring: nil,
                      include_locations: false,
                      collections: nil,
                      sort: nil,
@@ -2389,6 +2400,7 @@ module Couchbase
         @highlight_fields = highlight_fields
         @fields = fields
         @disable_scoring = disable_scoring
+        @scoring = scoring
         @include_locations = include_locations
         @collections = collections
         @sort = sort
@@ -2433,13 +2445,21 @@ module Couchbase
       attr_reader :scan_consistency
 
       # @api private
+      def validate_scoring
+        raise Error::InvalidArgument, "disable_scoring and scoring must not be used together" if @disable_scoring && !@scoring.nil?
+      end
+
+      # @api private
       def to_backend(show_request: nil)
+        validate_scoring
+
         {
           timeout: Utils::Time.extract_duration(@timeout),
           limit: @limit,
           skip: @skip,
           explain: @explain,
           disable_scoring: @disable_scoring,
+          scoring: @scoring&.to_backend,
           include_locations: @include_locations,
           collections: @collections,
           highlight_style: @highlight_style,
