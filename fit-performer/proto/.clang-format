@@ -1,0 +1,7 @@
+# -*- mode: yaml; -*-
+
+# The .proto files are copied verbatim from the FIT protocol repository, so they
+# must not be reformatted by clang-format (which formats .proto files by default)
+---
+DisableFormat: true
+SortIncludes: false
