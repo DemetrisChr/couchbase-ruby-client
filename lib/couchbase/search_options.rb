@@ -25,8 +25,6 @@ module Couchbase
     # @overload new(vector_search)
     #   Will run a +VectorSearch+
     #   @param [VectorSearch] vector_search
-    #
-    #   @!macro uncommitted
     def initialize(search)
       case search
       when SearchQuery
@@ -57,8 +55,6 @@ module Couchbase
     # @param [VectorSearch] query
     #
     # @return [SearchRequest] for chaining purposes
-    #
-    # @!macro uncommitted
     def vector_search(query)
       raise Error::InvalidArgument, "A VectorSearch has already been specified" unless @vector_search.nil?
 
@@ -1046,7 +1042,6 @@ module Couchbase
     end
   end
 
-  # @!macro uncommitted
   class VectorSearch
     # Constructs a +VectorSearch+ instance, which allows one or more individual vector queries to be executed.
     #
@@ -1065,7 +1060,6 @@ module Couchbase
     end
   end
 
-  # @!macro uncommitted
   class VectorQuery
     # @return [Integer, nil]
     attr_accessor :num_candidates
@@ -1255,6 +1249,101 @@ module Couchbase
       # @api private
       def to_json(*)
         {by: :geo_distance, field: field, desc: desc, location: [longitude, latitude], unit: unit}.to_json(*)
+      end
+    end
+  end
+
+  # +SearchScoring+ specifies the scoring mode used for a search request. For a hybrid search (a traditional FTS
+  # query combined with one or more vector queries) a fusion strategy controls how the FTS and vector result
+  # sets are merged into a single ranked list.
+  #
+  class SearchScoring
+    # @yieldparam [SearchScoringReciprocalRankFusion]
+    #
+    # @!macro uncommitted
+    #
+    # @return [SearchScoringReciprocalRankFusion]
+    def self.reciprocal_rank_fusion(&)
+      SearchScoringReciprocalRankFusion.new(&)
+    end
+
+    # @yieldparam [SearchScoringRelativeScoreFusion]
+    #
+    # @!macro uncommitted
+    #
+    # @return [SearchScoringRelativeScoreFusion]
+    def self.relative_score_fusion(&)
+      SearchScoringRelativeScoreFusion.new(&)
+    end
+
+    # @return [SearchScoringNone]
+    def self.none
+      SearchScoringNone.new
+    end
+
+    # +SearchScoringReciprocalRankFusion+ merges the FTS and vector result sets of a hybrid search by rank rather
+    # than raw score.
+    #
+    # @!macro uncommitted
+    class SearchScoringReciprocalRankFusion < SearchScoring
+      # @return [Integer, nil] the rank constant used when merging the result sets (the server defaults this to 60)
+      attr_accessor :rank_constant
+
+      # @return [Integer, nil] how many results per list are considered for fusion (the server defaults this to the
+      #   request limit)
+      attr_accessor :window_size
+
+      # @yieldparam [SearchScoringReciprocalRankFusion]
+      def initialize
+        super
+        yield self if block_given?
+      end
+
+      # @api private
+      def to_backend
+        {
+          mode: :reciprocal_rank_fusion,
+          params: {
+            rank_constant: @rank_constant,
+            window_size: @window_size,
+          }.compact,
+        }
+      end
+    end
+
+    # +SearchScoringRelativeScoreFusion+ merges the FTS and vector result sets of a hybrid search by normalized
+    # score.
+    #
+    # @!macro uncommitted
+    class SearchScoringRelativeScoreFusion < SearchScoring
+      # @return [Integer, nil] how many results per list are considered for fusion (the server defaults this to the
+      #   request limit)
+      attr_accessor :window_size
+
+      # @yieldparam [SearchScoringRelativeScoreFusion]
+      def initialize
+        super
+        yield self if block_given?
+      end
+
+      # @api private
+      def to_backend
+        {
+          mode: :relative_score_fusion,
+          params: {
+            window_size: @window_size,
+          }.compact,
+        }
+      end
+    end
+
+    # +SearchScoringNone+ disables scoring.
+    class SearchScoringNone < SearchScoring
+      # @api private
+      def to_backend
+        {
+          mode: :none,
+        }
       end
     end
   end

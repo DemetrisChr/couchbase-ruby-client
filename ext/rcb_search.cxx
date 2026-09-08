@@ -29,6 +29,7 @@
 #include <core/operations/management/search_index_get_documents_count.hxx>
 #include <core/operations/management/search_index_get_stats.hxx>
 #include <core/operations/management/search_index_upsert.hxx>
+#include <core/search_scoring.hxx>
 
 #include <gsl/narrow>
 #include <spdlog/fmt/bundled/core.h>
@@ -925,6 +926,28 @@ cb_Backend_document_search(VALUE self,
     cb_extract_option_bool(req.disable_scoring, options, "disable_scoring");
     cb_extract_option_bool(req.include_locations, options, "include_locations");
     cb_extract_option_bool(req.show_request, options, "show_request");
+
+    if (VALUE scoring = rb_hash_aref(options, rb_id2sym(rb_intern("scoring"))); !NIL_P(scoring)) {
+      cb_check_type(scoring, T_HASH);
+      VALUE mode = rb_hash_aref(scoring, rb_id2sym(rb_intern("mode")));
+      cb_check_type(mode, T_SYMBOL);
+      VALUE params = rb_hash_aref(scoring, rb_id2sym(rb_intern("params")));
+      if (ID mode_type = rb_sym2id(mode); mode_type == rb_intern("none")) {
+        req.scoring = core::search_scoring_none{};
+      } else if (mode_type == rb_intern("reciprocal_rank_fusion")) {
+        core::search_scoring_reciprocal_rank_fusion rrf{};
+        cb_extract_option_number(rrf.rank_constant, params, "rank_constant");
+        cb_extract_option_number(rrf.window_size, params, "window_size");
+        req.scoring = rrf;
+      } else if (mode_type == rb_intern("relative_score_fusion")) {
+        core::search_scoring_relative_score_fusion rsf{};
+        cb_extract_option_number(rsf.window_size, params, "window_size");
+        req.scoring = rsf;
+      } else {
+        throw ruby_exception(rb_eArgError,
+                             rb_sprintf("unknown search scoring mode: %+" PRIsVALUE, mode));
+      }
+    }
 
     if (VALUE vector_options = rb_hash_aref(search_request, rb_id2sym(rb_intern("vector_search")));
         !NIL_P(vector_options)) {

@@ -58,6 +58,8 @@ module FIT
                    .set_facets
                    .set_raw
                    .set_include_locations
+                   .set_disable_scoring
+                   .set_scoring
                    .set_parent_span(@get_span_fn)
             @cmd_args.append(builder.options)
           end
